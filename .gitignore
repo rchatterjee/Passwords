@@ -3,3 +3,10 @@
 banned_*
 eff_data/
 .ipynb_*
+*.zip
+*.csv
+*.txt
+PastebinDumps/
+Paste*/
+leaked*/
+*.pyc
