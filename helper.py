@@ -52,16 +52,6 @@ class random:
     def sample(arr, n):
         return [arr[i] for i in random.randints(0, len(arr)-1, n)]
 
-class Token:
-    def __init__(self, v_=None, n_=None, o_=None):
-        self.value = v_
-        self.name = n_
-        self.orig = o_
-
-    @property
-    def __str__(self):
-        return "%s,%s,%s" % (self.value, self.name, self.orig)
-
 
 # returns the type of file.
 def file_type(filename, param='r'):

@@ -186,8 +186,10 @@ def getallgroups(arr, k=-1):
     """
     if k<0:
         k = len(arr)
-    return itertools.chain.from_iterable(itertools.combinations(set(arr), j)
-                                    for j in range(1,k+1))
+    return itertools.chain.from_iterable(
+        itertools.combinations(set(arr), j)
+        for j in range(1,k+1)
+    )
     
 
 def is_asciistring(s):
@@ -289,13 +291,13 @@ class Passwords(object):
     file.
     """
     def __init__(self, pass_file):
-        fbansename = os.path.basename(pass_file).split('.',1)[0]
+        fbasename = os.path.basename(pass_file).split('.',1)[0]
         _dirname = '{}/eff_data/'.format(pwd)
         if not os.path.exists(_dirname):
             os.makedirs(_dirname)
 
-        self._file_trie = os.path.join(_dirname, fbansename+'.trie')
-        self._file_freq = os.path.join(_dirname, fbansename+'.npz') # Record trie Zindabad
+        self._file_trie = os.path.join(_dirname, fbasename+'.trie')
+        self._file_freq = os.path.join(_dirname, fbasename+'.npz')
         if os.path.exists(self._file_trie) and os.path.exists(self._file_freq):
             self.load_data()
         else:
@@ -335,6 +337,12 @@ class Passwords(object):
         except KeyError:
             return -1
 
+    def id2pw(self, _id):
+        try:
+            return self._T.restore_key(_id)
+        except KeyError:
+            return ''
+    
     def pw2freq(self, pw):
         try:
             return self._freq_list[self._T.key_id(unicode(pw))]
@@ -342,28 +350,50 @@ class Passwords(object):
         except KeyError:
             return 0
     
-    def iterpws_in_order(self):
+    def id2freq(self, _id):
+        try:
+            return self._freq_list[_id]
+        except ValueError:
+            return 0
+
+    def sumvalues(self, q=0):
+        """Sum of top q passowrd frequencies
+        """
+        if q!=0:
+            return self._totalf
+        else:
+            return -np.partition(-self._freq_list, q)[:q].sum()
+
+    def iterpws(self):
         """
         Returns passwords in order
         """
         for _id in np.argsort(self._freq_list)[::-1]:
             yield self._T.restore_key(_id), self._freq_list[_id]
 
-    def iterpws(self):
+    def justiter(self):
         for w, _id in self._T.iteritems():
             yield w, self._freq_list[_id]
 
-    def id2pw(self, _id):
-        try:
-            return self._T.restore_key(_id)
-        except KeyError:
-            return ''
-    
-    def id2freq(self, _id):
-        try:
-            return self._freq_list[_id]
-        except ValueError:
-            return 0
+    def keys(self):
+        return self._T.iterkeys()
+
+    def values(self):
+        return self._freq_list
+
+    def __iter__(self):
+        for _id in np.argsort(self._freq_list)[::-1]:
+            yield _id, self._freq_list[_id]
+
+    def __getitem__(self, k):
+        if isinstance(k, int):
+            return self._freq_list[k]
+        if isinstance(k, int):
+            return self._freq_list(self.pw2id(k))
+        raise TypeError("_id is wrong type ({}) expects str or int".format(type(_id)))
+
+    def __len__(self):
+        return self._freq_list.shape[0]
 
 import unittest
 class TestPasswords(unittest.TestCase):
@@ -376,13 +406,13 @@ class TestPasswords(unittest.TestCase):
             self.assertEqual(passwords.pw2freq(pw), f, "Frequency mismatch"\
                              " for {}, expected {}, got {}".format(pw, f, passwords.pw2freq(pw)))
     def test_getallgroups(self):
-        for inp, res in [([1,2,3], set([(1,), (2,), (3,), (1,2), (2,3), (1,3)]))]:
+        for inp, res in [([1,2,3], set([(1,), (2,), (3,), (1,2), (2,3), (1,3), (1,2,3)]))]:
             res1 = set(getallgroups(inp))
             self.assertEqual(res1, res, "Expecting: {}, got: {}".format(res, res1))
 
 
 if __name__ == "__main__":    
     # print(list(getallgroups([1,2,3,4,5,6,7,8,9], 5)))
+    unittest.main()
     pass
-    # unittest.main()
 
