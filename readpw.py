@@ -21,7 +21,6 @@ import tarfile
 home = expanduser("~")
 pwd = os.path.dirname(os.path.abspath(__file__))
 ROCKYOU_TOTAL_CNT = 32603388.0
-pw_characters = string.ascii_letters + string.digits+string.punctuation + ' '
 
 class random:
     @staticmethod
@@ -326,7 +325,7 @@ class Passwords(object):
         self._T = marisa_trie.Trie()
         self._T.load(self._file_trie)
         np_f = np.load(self._file_freq)
-        self._freq_list, self._totalf = np_f['freq'], np_f['fsum'] 
+        self._freq_list, self._totalf = np_f['freq'], np_f['fsum']
 
     def totalf(self):
         return self._totalf
@@ -336,13 +335,19 @@ class Passwords(object):
             return self._T.key_id(unicode(pw))
         except KeyError:
             return -1
+        except UnicodeDecodeError as e:
+            print(repr(pw)), e
+            raise Exception(e)
 
     def id2pw(self, _id):
         try:
             return self._T.restore_key(_id)
         except KeyError:
             return ''
-    
+
+    def prob(self, pw):
+        return self.__getitem__(pw)/self._totalf
+
     def pw2freq(self, pw):
         try:
             return self._freq_list[self._T.key_id(unicode(pw))]
@@ -359,7 +364,7 @@ class Passwords(object):
     def sumvalues(self, q=0):
         """Sum of top q passowrd frequencies
         """
-        if q!=0:
+        if q==0:
             return self._totalf
         else:
             return -np.partition(-self._freq_list, q)[:q].sum()
@@ -388,9 +393,9 @@ class Passwords(object):
     def __getitem__(self, k):
         if isinstance(k, int):
             return self._freq_list[k]
-        if isinstance(k, int):
-            return self._freq_list(self.pw2id(k))
-        raise TypeError("_id is wrong type ({}) expects str or int".format(type(_id)))
+        if isinstance(k, unicode):
+            return self._freq_list[self.pw2id(k)]
+        raise TypeError("_id is wrong type ({}) expects str or int".format(type(k)))
 
     def __len__(self):
         return self._freq_list.shape[0]
