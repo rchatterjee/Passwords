@@ -310,7 +310,7 @@ class Passwords(object):
         # )
         tmp_dict = {unicode(w): c for w,c in open_get_line(pass_file)}
         self._T = marisa_trie.Trie(tmp_dict.keys())
-        self._freq_list = np.zeros(len(self._T)+1)
+        self._freq_list = np.zeros(len(self._T)+1, dtype=int)
         for k in self._T.iterkeys():
             self._freq_list[self._T.key_id(k)] = tmp_dict[k]
         self._T.save(self._file_trie)
