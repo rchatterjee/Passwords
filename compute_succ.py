@@ -40,5 +40,18 @@ def compute_black_list_succ(fname, b, q, sketch_size):
     else:
         return nfarr.sum()/pwf.totalf()
 
+
+def entropy(rpw):
+    pass
+
+def policy(rpw, tpw):
+    pass
+
+def create_typo_balls(fname):
+    pass
+
+def compute_online_guessing(fname, q):
+    pass
+
 if __name__ == "__main__":
     print compute_black_list_succ(sys.argv[1], 0, 1000, 0)
