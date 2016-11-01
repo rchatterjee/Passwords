@@ -1,0 +1,15 @@
+{
+ "display_name": "ETC (Python 2)",
+ "language": "python",
+ "codemirror_mode": {
+  "version": 3,
+  "name": "ipython"
+ },
+ "argv": [
+  "/home/rahul/.venvs/etcvenv/bin/python",
+  "-c",
+  "from IPython.kernel.zmq.kernelapp import main; main()",
+  "-f",
+  "{connection_file}"
+ ]
+}
