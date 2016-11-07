@@ -40,12 +40,12 @@ class random:
         multiple random integer. @randints is more efficient
         """
         return random.randints(s,e,1)[0]
-    
+
     @staticmethod
     def choice(arr):
         i = random.randint(0, len(arr))
         return arr[i]
-    
+
     @staticmethod
     def sample(arr, n, unique=False):
         if unique:
@@ -85,7 +85,7 @@ def gen_n_random_num(n, MAX_NUM=MAX_INT, unique=True):
             t =  struct.calcsize(fmt)
             extra = struct.unpack(fmt, os.urandom(t))
             D |= set(d%MAX_NUM for d in extra)
-        D = list(D)        
+        D = list(D)
     return D
 
 
@@ -96,7 +96,7 @@ def sample_following_dist(handle_iter, n, totalf):
     which is euqal to sum(f for pw,f in handle_iter)
     As, handle_iterator is an iterator and can only traverse once, @totalf
     needs to be supplied to the funciton.
-    
+
     Returns, an array of @n tuples (id, pw) sampled from @handle_iter.
     """
     multiplier = 1.0
@@ -189,7 +189,7 @@ def getallgroups(arr, k=-1):
         itertools.combinations(set(arr), j)
         for j in range(1,k+1)
     )
-    
+
 
 def is_asciistring(s):
     try:
@@ -228,7 +228,7 @@ def get_line(file_object, limit=-1, pw_filter=lambda x: True):
 
 def open_get_line(filename, limit=-1, **kwargs):
     """Opens the password file named @filename and reads first @limit
-    passwords. @kwargs are passed to get_line for further processing. 
+    passwords. @kwargs are passed to get_line for further processing.
     For example, pw_filter etc.
     @fielname: string
     @limit: integer
@@ -270,7 +270,7 @@ def mean_sd(arr):
 
 def convert2group(t, totalC):
     return t + random.randint(0, (MAX_INT-t)/totalC) * totalC
-    
+
 def warning(*objs):
     if DEBUG:
         print("WARNING: ", *objs, file=sys.stderr)
@@ -289,23 +289,25 @@ class Passwords(object):
     Its a class to efficiently store and read large password
     file.
     """
-    def __init__(self, pass_file):
-        fbasename = os.path.basename(pass_file).split('.',1)[0]
+    def __init__(self, pass_file, max_pass_len=40, min_pass_len=1):
+        self.fbasename = os.path.basename(pass_file).split('.',1)[0]
         _dirname = '{}/eff_data/'.format(pwd)
         if not os.path.exists(_dirname):
             os.makedirs(_dirname)
 
-        self._file_trie = os.path.join(_dirname, fbasename+'.trie')
-        self._file_freq = os.path.join(_dirname, fbasename+'.npz')
+        self._max_pass_len = max_pass_len
+        self._min_pass_len = min_pass_len
+        self._file_trie = os.path.join(_dirname, self.fbasename + '.trie')
+        self._file_freq = os.path.join(_dirname, self.fbasename + '.npz')
         if os.path.exists(self._file_trie) and os.path.exists(self._file_freq):
             self.load_data()
         else:
             self.create_data_structure(pass_file)
-           
+
     def create_data_structure(self, pass_file):
         # Record trie
         # self._T = marisa_trie.RecordTrie(
-        #     '<II', ((unicode(w), (c,)) 
+        #     '<II', ((unicode(w), (c,))
         #             for i, (w,c) in enumerate(passwords.open_get_line(pass_file)))
         # )
         tmp_dict = {unicode(w): c for w,c in open_get_line(pass_file)}
@@ -329,7 +331,7 @@ class Passwords(object):
 
     def totalf(self):
         return self._totalf
-    
+
     def pw2id(self, pw):
         try:
             return self._T.key_id(unicode(pw))
@@ -354,7 +356,7 @@ class Passwords(object):
             # return self._T.get(unicode(pw), 0)
         except KeyError:
             return 0
-    
+
     def id2freq(self, _id):
         try:
             return self._freq_list[_id]
@@ -374,7 +376,9 @@ class Passwords(object):
         Returns passwords in order
         """
         for _id in np.argsort(self._freq_list)[::-1]:
-            yield self._T.restore_key(_id), self._freq_list[_id]
+            pw = self._T.restore_key(_id)
+            if self._min_pass_len <= len(pw) <= self._max_pass_len:
+                yield _id, pw, self._freq_list[_id]
 
     def justiter(self):
         for w, _id in self._T.iteritems():
@@ -404,8 +408,8 @@ import unittest
 class TestPasswords(unittest.TestCase):
     def test_pw2freq(self):
         passwords = Passwords(os.path.expanduser('~/passwords/rockyou-withcount.txt.bz2'))
-        for pw, f in {'michelle': 12714, 'george': 4749, 
-                      'familia': 1975, 'honeybunny': 242, 
+        for pw, f in {'michelle': 12714, 'george': 4749,
+                      'familia': 1975, 'honeybunny': 242,
                       'asdfasdf2wg': 0, '  234  adsf': 0}.items():
             pw = unicode(pw)
             self.assertEqual(passwords.pw2freq(pw), f, "Frequency mismatch"\
@@ -416,8 +420,7 @@ class TestPasswords(unittest.TestCase):
             self.assertEqual(res1, res, "Expecting: {}, got: {}".format(res, res1))
 
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
     # print(list(getallgroups([1,2,3,4,5,6,7,8,9], 5)))
     unittest.main()
     pass
-
