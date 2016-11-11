@@ -371,11 +371,11 @@ class Passwords(object):
         else:
             return -np.partition(-self._freq_list, q)[:q].sum()
 
-    def iterpws(self):
+    def iterpws(self, n):
         """
         Returns passwords in order
         """
-        for _id in np.argsort(self._freq_list)[::-1]:
+        for _id in np.argsort(self._freq_list)[::-1][:n]:
             pw = self._T.restore_key(_id)
             if self._min_pass_len <= len(pw) <= self._max_pass_len:
                 yield _id, pw, self._freq_list[_id]
