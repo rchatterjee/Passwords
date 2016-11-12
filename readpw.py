@@ -22,52 +22,6 @@ home = expanduser("~")
 pwd = os.path.dirname(os.path.abspath(__file__))
 ROCKYOU_TOTAL_CNT = 32603388.0
 
-class random:
-    @staticmethod
-    def randints(s, e, n=1):
-        """
-        returns n uniform random numbers from [s, e]
-        """
-        assert e>=s, "Wrong range: [{}, {})".format(s, e)
-        n = max(1, n)
-        arr = [s + a%(e-s) for a in struct.unpack('<%dL'%n, os.urandom(4*n))]
-        return arr
-
-    @staticmethod
-    def randint(s,e):
-        """
-        returns one random integer between s and e. Try using @randints in case you need
-        multiple random integer. @randints is more efficient
-        """
-        return random.randints(s,e,1)[0]
-
-    @staticmethod
-    def choice(arr):
-        i = random.randint(0, len(arr))
-        return arr[i]
-
-    @staticmethod
-    def sample(arr, n, unique=False):
-        if unique:
-            arr = set(arr)
-            assert len(arr)>n, "Cannot sample uniquely from a small array."
-            if len(arr) == n:
-                return arr;
-            if n>len(arr)/2:
-                res = list(arr)
-                while len(res)>n:
-                    del res[random.randint(0,len(res))]
-            else:
-                res = []
-                arr = list(arr)
-                while len(res)<n:
-                    i = random.randint(0,len(arr))
-                    res.append(arr[i])
-                    del arr[i]
-        else:
-            return [arr[i] for i in random.randints(0, len(arr), n)]
-
-
 def gen_n_random_num(n, MAX_NUM=MAX_INT, unique=True):
     """
     Returns @n @unique random unsigned integers (4 bytes) \
@@ -285,9 +239,20 @@ def getIndex(p, A):
     return i
 
 class Passwords(object):
-    """
-    Its a class to efficiently store and read large password
-    file.
+    """Its a class to efficiently store and read large password file. It
+    creates two files for each password in the under the directory
+    'eff_data/' in current directory (where this file is). First file
+    is a trie, which just stores all the password in efficient prefix
+    trie format using "marisa_trie" module. The second is a numy large
+    array, containing the indicies. This is what I found the most
+    memory and compute efficient way of accessing passwords in Python.
+    @pass_file: the path of the file you want to process. The file
+    should countain freq and the password similar to the output of
+    unix "uniq -c" command.  
+    @max_pass_len, min_pass_len defines the
+    range of password to consider. Note, this filtering does not
+    effect the totalf, and only changes the iterpws() function. 
+
     """
     def __init__(self, pass_file, max_pass_len=40, min_pass_len=1):
         self.fbasename = os.path.basename(pass_file).split('.',1)[0]
@@ -373,7 +338,10 @@ class Passwords(object):
 
     def iterpws(self, n):
         """
-        Returns passwords in order
+        Returns passwords in order of their frequencies. 
+        @n: The numebr of passwords to return 
+        Return: pwid, password, frequency
+        Every password is assigned an uniq id, for efficient access. 
         """
         for _id in np.argsort(self._freq_list)[::-1][:n]:
             pw = self._T.restore_key(_id)
