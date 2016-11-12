@@ -3,10 +3,8 @@
 from __future__ import print_function
 import sys, os
 import bz2, re
-import json, string
-import random, re, itertools
+import itertools
 import operator
-import struct
 import marisa_trie
 import numpy as np
 
@@ -21,27 +19,6 @@ import tarfile
 home = expanduser("~")
 pwd = os.path.dirname(os.path.abspath(__file__))
 ROCKYOU_TOTAL_CNT = 32603388.0
-
-def gen_n_random_num(n, MAX_NUM=MAX_INT, unique=True):
-    """
-    Returns @n @unique random unsigned integers (4 bytes) \
-    between 0 and @MAX_NUM.
-    """
-    fmt = "<%dI" % n
-    t =  struct.calcsize(fmt)
-    D = [d%MAX_NUM for d in struct.unpack(fmt, os.urandom(t))]
-    if unique:
-        D = set(D)
-        assert MAX_NUM>n, "Cannot have {0} unique integers less than {1}".format(n, MAX_NUM)
-        while len(D)<n:
-            print ("Number of collision: {}. Regenerating!".format(n-len(D)))
-            fmt = "<%dI" % (n-len(D))
-            t =  struct.calcsize(fmt)
-            extra = struct.unpack(fmt, os.urandom(t))
-            D |= set(d%MAX_NUM for d in extra)
-        D = list(D)
-    return D
-
 
 def sample_following_dist(handle_iter, n, totalf):
     """Samples n passwords following the distribution from the handle
@@ -60,21 +37,17 @@ def sample_following_dist(handle_iter, n, totalf):
 
     totalf = totalf * multiplier
     print("# Population Size", totalf)
-    A = gen_n_random_num(n, totalf, unique=False)
-    A.sort(reverse=True)
+    A = np.sort(np.unique(np.random.randint(0, totalf, size=n*2))[:n])
+    A = A[::-1]
     # Uniqueness check, non necessarily required, but not very
     # computationally intensive
     assert len(A) == n, "Not enough randomnumbers generated"\
         "Requried {}, generated only {}".format(n, len(A))
-    # if not all(A[i] != A[i-1] for i in range(1,n,1)):
-    #     for i in range(1,n,1):
-    #         if A[i] == A[i-1]:
-    #             print i, A[i], A[i-1]
     j = 0
     sampled = 0
     val = A.pop()
     # print handle_iter
-    for w,f in handle_iter:
+    for _,w,f in handle_iter:
         j += f*multiplier
         if not A: break
         while val<j:
@@ -94,7 +67,6 @@ def sample_following_dist(handle_iter, n, totalf):
             i, val = A.pop()
         else:
             break
-
 
 def MILLION(n):
     return n*10e6
@@ -129,8 +101,8 @@ def open_(filename, mode='r'):
     elif type_ == "gz":
         f = tarfile.open(filename, mode)
     else:
-        f = open(filename, mode);
-    return f;
+        f = open(filename, mode)
+    return f
 
 def getallgroups(arr, k=-1):
     """
@@ -206,13 +178,9 @@ def tokens(w):
 
 
 def whatchar(c):
-    if c.isalpha(): return 'L';
-    if c.isdigit():
-        return 'D';
-    else:
-        return 'Y'
+    return 'L' if c.isalpha() else \
+        'D' if c.isdigit else 'Y'
 
-import numpy as np
 def mean_sd(arr):
     s = sum(arr)
     s2 = sum([x * x for x in arr])
@@ -223,7 +191,10 @@ def mean_sd(arr):
 
 
 def convert2group(t, totalC):
-    return t + random.randint(0, (MAX_INT-t)/totalC) * totalC
+    """
+    What is this?
+    """
+    return t + np.random.randint(0, (MAX_INT-t)/totalC) * totalC
 
 def warning(*objs):
     if DEBUG:
@@ -232,9 +203,9 @@ def warning(*objs):
 # assumes last element in the array(A) is the sum of all elements
 def getIndex(p, A):
     p %= A[-1]
-    i = 0;
+    i = 0
     for i, v in enumerate(A):
-        p -= v;
+        p -= v
         if p < 0: break
     return i
 
@@ -264,20 +235,23 @@ class Passwords(object):
         self._min_pass_len = min_pass_len
         self._file_trie = os.path.join(_dirname, self.fbasename + '.trie')
         self._file_freq = os.path.join(_dirname, self.fbasename + '.npz')
+        self._T, self._freq_list, self._totalf = None, None, None
         if os.path.exists(self._file_trie) and os.path.exists(self._file_freq):
             self.load_data()
         else:
             self.create_data_structure(pass_file)
+        assert self._T, "Could not initialize the trie."
 
     def create_data_structure(self, pass_file):
-        # Record trie
+        # Record trie, Slow, and not memory efficient
         # self._T = marisa_trie.RecordTrie(
         #     '<II', ((unicode(w), (c,))
-        #             for i, (w,c) in enumerate(passwords.open_get_line(pass_file)))
+        #             for i, (w,c) in 
+        #     enumerate(passwords.open_get_line(pass_file)))
         # )
         tmp_dict = {unicode(w): c for w,c in open_get_line(pass_file)}
         self._T = marisa_trie.Trie(tmp_dict.keys())
-        self._freq_list = np.zeros(len(self._T)+1, dtype=int)
+        self._freq_list = np.zeros(len(self._T), dtype=int)
         for k in self._T.iterkeys():
             self._freq_list[self._T.key_id(k)] = tmp_dict[k]
         self._T.save(self._file_trie)
@@ -287,6 +261,22 @@ class Passwords(object):
             freq=self._freq_list,
             fsum=self._totalf
         )
+
+    def sample_pws(self, n, asperdist=True):
+        """Returns n passwords sampled from this password dataset.  if
+        asperdist is True, then returns the password sampled according
+        the password histogram distribution (with
+        replacement). Passwords are always sampled with replacement.
+
+        TODO: The sample users, instead of passwords perse. 
+        """
+        if asperdist:
+            sample = np.random.choice(
+                self._freq_list.shape[0], size=n, p=self._freq_list/self._totalf
+            )
+        else:
+            sample = np.random.choice(len(self._T), size=n)
+        return (self._T.restore_key(i) for i in sample)
 
     def load_data(self):
         self._T = marisa_trie.Trie()
@@ -303,7 +293,7 @@ class Passwords(object):
         except KeyError:
             return -1
         except UnicodeDecodeError as e:
-            print(repr(pw)), e
+            print(repr(pw), e)
             raise Exception(e)
 
     def id2pw(self, _id):
@@ -367,7 +357,8 @@ class Passwords(object):
             return self._freq_list[k]
         if isinstance(k, unicode):
             return self._freq_list[self.pw2id(k)]
-        raise TypeError("_id is wrong type ({}) expects str or int".format(type(k)))
+        raise TypeError("_id is wrong type ({}) expects str or int"
+                        .format(type(k)))
 
     def __len__(self):
         return self._freq_list.shape[0]
@@ -375,17 +366,21 @@ class Passwords(object):
 import unittest
 class TestPasswords(unittest.TestCase):
     def test_pw2freq(self):
-        passwords = Passwords(os.path.expanduser('~/passwords/rockyou-withcount.txt.bz2'))
+        passwords = Passwords(
+            os.path.expanduser('~/passwords/rockyou-withcount.txt.bz2')
+        )
         for pw, f in {'michelle': 12714, 'george': 4749,
                       'familia': 1975, 'honeybunny': 242,
                       'asdfasdf2wg': 0, '  234  adsf': 0}.items():
             pw = unicode(pw)
-            self.assertEqual(passwords.pw2freq(pw), f, "Frequency mismatch"\
-                             " for {}, expected {}, got {}".format(pw, f, passwords.pw2freq(pw)))
+            self.assertEqual(passwords.pw2freq(pw), f)
     def test_getallgroups(self):
-        for inp, res in [([1,2,3], set([(1,), (2,), (3,), (1,2), (2,3), (1,3), (1,2,3)]))]:
+        for inp, res in [(
+                [1,2,3], set([
+                    (1,), (2,), (3,), (1,2), (2,3), (1,3), (1,2,3)])
+        )]:
             res1 = set(getallgroups(inp))
-            self.assertEqual(res1, res, "Expecting: {}, got: {}".format(res, res1))
+            self.assertEqual(res1, res)
 
 
 if __name__ == "__main__":
