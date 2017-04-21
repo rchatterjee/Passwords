@@ -340,7 +340,7 @@ class Passwords(object):
 
     def justiter(self):
         for w, _id in self._T.iteritems():
-            yield w, self._freq_list[_id]
+            yield _id, w, self._freq_list[_id]
 
     def keys(self):
         return self._T.iterkeys()
