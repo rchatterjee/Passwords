@@ -1,5 +1,4 @@
-#!/usr/bin/python
-
+#!/usr/bin/python3
 from __future__ import print_function
 import sys, os
 import bz2, re
@@ -7,6 +6,9 @@ import itertools
 import operator
 import marisa_trie
 import numpy as np
+
+"""Run with Python 3 your life will be much easier.
+"""
 
 MAX_INT = 2**64-1
 DEBUG = True
@@ -219,10 +221,10 @@ class Passwords(object):
     memory and compute efficient way of accessing passwords in Python.
     @pass_file: the path of the file you want to process. The file
     should countain freq and the password similar to the output of
-    unix "uniq -c" command.  
+    unix "uniq -c" command.
     @max_pass_len, min_pass_len defines the
     range of password to consider. Note, this filtering does not
-    effect the totalf, and only changes the iterpws() function. 
+    effect the totalf, and only changes the iterpws() function.
 
     """
     def __init__(self, pass_file, max_pass_len=40, min_pass_len=1):
@@ -246,10 +248,10 @@ class Passwords(object):
         # Record trie, Slow, and not memory efficient
         # self._T = marisa_trie.RecordTrie(
         #     '<II', ((unicode(w), (c,))
-        #             for i, (w,c) in 
+        #             for i, (w,c) in
         #     enumerate(passwords.open_get_line(pass_file)))
         # )
-        tmp_dict = {unicode(w): c for w,c in open_get_line(pass_file)}
+        tmp_dict = {w: c for w,c in open_get_line(pass_file)}
         self._T = marisa_trie.Trie(tmp_dict.keys())
         self._freq_list = np.zeros(len(self._T), dtype=int)
         for k in self._T.iterkeys():
@@ -268,7 +270,7 @@ class Passwords(object):
         the password histogram distribution (with
         replacement). Passwords are always sampled with replacement.
 
-        TODO: The sample users, instead of passwords perse. 
+        TODO: The sample users, instead of passwords perse.
         """
         if asperdist:
             sample = np.random.choice(
@@ -289,7 +291,7 @@ class Passwords(object):
 
     def pw2id(self, pw):
         try:
-            return self._T.key_id(unicode(pw))
+            return self._T.key_id(pw)
         except KeyError:
             return -1
         except UnicodeDecodeError as e:
@@ -321,17 +323,17 @@ class Passwords(object):
     def sumvalues(self, q=0):
         """Sum of top q passowrd frequencies
         """
-        if q==0:
+        if q == 0:
             return self._totalf
         else:
             return -np.partition(-self._freq_list, q)[:q].sum()
 
     def iterpws(self, n):
         """
-        Returns passwords in order of their frequencies. 
-        @n: The numebr of passwords to return 
+        Returns passwords in order of their frequencies.
+        @n: The numebr of passwords to return
         Return: pwid, password, frequency
-        Every password is assigned an uniq id, for efficient access. 
+        Every password is assigned an uniq id, for efficient access.
         """
         for _id in np.argsort(self._freq_list)[::-1][:n]:
             pw = self._T.restore_key(_id)
@@ -355,7 +357,7 @@ class Passwords(object):
     def __getitem__(self, k):
         if isinstance(k, int):
             return self._freq_list[k]
-        if isinstance(k, unicode):
+        if isinstance(k, str):
             return self._freq_list[self.pw2id(k)]
         raise TypeError("_id is wrong type ({}) expects str or int"
                         .format(type(k)))
