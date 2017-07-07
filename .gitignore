@@ -11,3 +11,5 @@ Paste*/
 leaked*/
 *.pyc
 cracking/
+LeakedData
+.DS_Store
