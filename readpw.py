@@ -7,8 +7,14 @@ import operator
 import marisa_trie
 import numpy as np
 
-"""Run with Python 3 your life will be much easier.
-"""
+"""A simple password library. Has function to put passwords into nice data
+structure for fast look up.
+
+The file creates a cache databse file in home folder with the name .passwords.
+
+In Unix you can find it using `~/.pypasswords`. 
+
+Run with Python 3 your life will be much easier.  """
 
 MAX_INT = 2**64-1
 DEBUG = True
@@ -19,7 +25,7 @@ from math import sqrt
 import tarfile
 
 home = expanduser("~")
-pwd = os.path.dirname(os.path.abspath(__file__))
+pass_dir = os.path.join(home, '.pypasswords')
 ROCKYOU_TOTAL_CNT = 32603388.0
 
 def sample_following_dist(handle_iter, n, totalf):
@@ -214,7 +220,7 @@ def getIndex(p, A):
 class Passwords(object):
     """Its a class to efficiently store and read large password file. It
     creates two files for each password in the under the directory
-    'eff_data/' in current directory (where this file is). First file
+    'eff_data/' in home+.pypassword directory (~/.pypasswords). First file
     is a trie, which just stores all the password in efficient prefix
     trie format using "marisa_trie" module. The second is a numy large
     array, containing the indicies. This is what I found the most
@@ -229,7 +235,7 @@ class Passwords(object):
     """
     def __init__(self, pass_file, max_pass_len=40, min_pass_len=1):
         self.fbasename = os.path.basename(pass_file).split('.',1)[0]
-        _dirname = '{}/eff_data/'.format(pwd)
+        _dirname = '{}/eff_data/'.format(pass_dir)
         if not os.path.exists(_dirname):
             os.makedirs(_dirname)
 
