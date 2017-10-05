@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 from __future__ import print_function
 import sys, os
 import bz2, re
@@ -6,6 +6,10 @@ import itertools
 import operator
 import marisa_trie
 import numpy as np
+from os.path import (expanduser)
+from math import sqrt
+# opens file checking whether it is bz2 compressed or not.
+import tarfile
 
 """A simple password library. Has function to put passwords into nice data
 structure for fast look up.
@@ -19,10 +23,6 @@ Run with Python 3 your life will be much easier.  """
 MAX_INT = 2**64-1
 DEBUG = True
 
-from os.path import (expanduser)
-from math import sqrt
-# opens file checking whether it is bz2 compressed or not.
-import tarfile
 
 home = expanduser("~")
 pass_dir = os.path.join(home, '.pypasswords')
@@ -86,12 +86,12 @@ def sort_dict(D):
 # returns the type of file.
 def file_type(filename):
     magic_dict = {
-        "\x1f\x8b\x08": "gz",
-        "\x42\x5a\x68": "bz2",
-        "\x50\x4b\x03\x04": "zip"
+        b"\x1f\x8b\x08": "gz",
+        b"\x42\x5a\x68": "bz2",
+        b"\x50\x4b\x03\x04": "zip"
     }
     max_len = max(len(x) for x in magic_dict)
-    with open(filename) as f:
+    with open(filename, 'rb') as f:
         file_start = f.read(max_len)
     for magic, filetype in magic_dict.items():
         if file_start.startswith(magic):
@@ -100,22 +100,24 @@ def file_type(filename):
 
 
 def open_(filename, mode='r'):
+    """Replace with tarfile.open in future, and ignore Python2"""
     if mode == 'w':
         type_ = filename.split('.')[-1]
     else:
         type_ = file_type(filename)
     if type_ == "bz2":
-        f = bz2.BZ2File(filename, mode)
+        f = bz2.open(filename, mode + 't', errors='replace')
     elif type_ == "gz":
         f = tarfile.open(filename, mode)
     else:
         f = open(filename, mode)
     return f
 
+
 def getallgroups(arr, k=-1):
     """
     returns all the subset of @arr of size less than equalto @k
-    the return array will be of size \sum_{i=1}^k nCi, n = len(arr)
+    the return array will be of size sum_{i=1}^k nCi, n = len(arr)
     """
     if k<0:
         k = len(arr)
@@ -145,13 +147,13 @@ def get_line(file_object, limit=-1, pw_filter=lambda x: True):
         c, w = m.groups()
         c = int(c)
         w = w.replace('\x00', '\\x00')
-        try:
-            w = w.decode('utf-8', errors='replace')
-        except UnicodeDecodeError:
-            #try with latin1
-            warning("Error in decoding: ({} {}). Line: {}. Ignoring!"\
-                    .format(w, c, l))
-            continue
+        # try:
+        #     w = w.decode('utf-8', errors='replace')
+        # except UnicodeDecodeError:
+        #     #try with latin1
+        #     warning("Error in decoding: ({} {}). Line: {}. Ignoring!"\
+        #             .format(w, c, l))
+        #     continue
         if w and pw_filter(w) and c>0:
             i += 1
             yield w,c
@@ -315,7 +317,7 @@ class Passwords(object):
 
     def pw2freq(self, pw):
         try:
-            return self._freq_list[self._T.key_id(unicode(pw))]
+            return self._freq_list[self._T.key_id(pw)]
             # return self._T.get(unicode(pw), 0)
         except KeyError:
             return 0
@@ -371,6 +373,7 @@ class Passwords(object):
     def __len__(self):
         return self._freq_list.shape[0]
 
+
 import unittest
 class TestPasswords(unittest.TestCase):
     def test_pw2freq(self):
@@ -380,8 +383,9 @@ class TestPasswords(unittest.TestCase):
         for pw, f in {'michelle': 12714, 'george': 4749,
                       'familia': 1975, 'honeybunny': 242,
                       'asdfasdf2wg': 0, '  234  adsf': 0}.items():
-            pw = unicode(pw)
+            pw = pw
             self.assertEqual(passwords.pw2freq(pw), f)
+
     def test_getallgroups(self):
         for inp, res in [(
                 [1,2,3], set([
@@ -394,4 +398,3 @@ class TestPasswords(unittest.TestCase):
 if __name__ == "__main__":
     # print(list(getallgroups([1,2,3,4,5,6,7,8,9], 5)))
     unittest.main()
-    pass

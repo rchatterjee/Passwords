@@ -71,29 +71,35 @@ def file_type(filename, param='r'):
     return "no match"
 
 
+# returns the type of file.
+def file_type(filename):
+    magic_dict = {
+        b"\x1f\x8b\x08": "gz",
+        b"\x42\x5a\x68": "bz2",
+        b"\x50\x4b\x03\x04": "zip"
+    }
+    max_len = max(len(x) for x in magic_dict)
+    with open(filename, 'rb') as f:
+        file_start = f.read(max_len)
+    for magic, filetype in magic_dict.items():
+        if file_start.startswith(magic):
+            return filetype
+    return "no match"
+
+
 def open_(filename, mode='r'):
-    type_ = file_type(filename, mode)
+    """Replace with tarfile.open in future, and ignore Python2"""
+    if mode == 'w':
+        type_ = filename.split('.')[-1]
+    else:
+        type_ = file_type(filename)
     if type_ == "bz2":
-        f = bz2.BZ2File(filename, mode)
+        f = bz2.open(filename, mode + 't', errors='replace')
     elif type_ == "gz":
         f = tarfile.open(filename, mode)
     else:
-        f = open(filename, mode);
-    return f;
-
-
-def get_line(file_object, lim=-1):
-    for i,l in enumerate(file_object):
-        if lim>0 and lim<i: 
-            break
-        try:
-            l.decode('ascii')
-            words = l.strip().split()
-            c, w = int(words[0]), ' '.join(words[1:])
-            if w and c>0:
-                yield w,c
-        except:
-            continue
+        f = open(filename, mode)
+    return f
         
 
 def print_err( *args ):
