@@ -304,7 +304,7 @@ class Passwords(object):
             return -1
         except UnicodeDecodeError as e:
             print(repr(pw), e)
-            raise Exception(e)
+            raise ValueError(e)
 
     def id2pw(self, _id):
         try:
@@ -323,6 +323,7 @@ class Passwords(object):
             return 0
 
     def id2freq(self, _id):
+        _id = int(_id)
         try:
             return self._freq_list[_id]
         except ValueError:
