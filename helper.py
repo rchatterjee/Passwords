@@ -11,7 +11,8 @@ PRODUCTION=False
 from os.path import (expanduser, basename)
 import struct
 # opens file checking whether it is bz2 compressed or not.
-import tarfile
+# import tarfile
+import gzip
 
 DEBUG = True
 home = expanduser("~")
@@ -96,7 +97,7 @@ def open_(filename, mode='r'):
     if type_ == "bz2":
         f = bz2.open(filename, mode + 't', errors='replace')
     elif type_ == "gz":
-        f = tarfile.open(filename, mode)
+        f = gzip.open(filename, mode)
     else:
         f = open(filename, mode)
     return f

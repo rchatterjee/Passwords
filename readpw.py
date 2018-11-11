@@ -313,7 +313,26 @@ class Passwords(object):
             return ''
 
     def prob(self, pw):
-        return self.__getitem__(pw)/self._totalf
+        try:
+            return self.__getitem__(pw)/self._totalf
+        except ValueError:
+            return 0.0
+
+    def prob_(self, pw):
+        p = self.prob(pw)
+        if p > 0: return p
+        w = pw
+        p = 1
+        minp = 1e-2  # Some random probability of each character
+        while len(w) > 0:
+            w_prefix_arr = self._T.prefixes(w)
+            if not w_prefix_arr:
+                w = w[1:]
+                p *= minp
+            else:
+                w = w[len(w_prefix_arr[-1]):]
+                p *= self.prob(w_prefix_arr[-1])
+        return p
 
     def pw2freq(self, pw):
         try:
@@ -364,12 +383,19 @@ class Passwords(object):
             yield _id, self._freq_list[_id]
 
     def __getitem__(self, k):
-        if isinstance(k, int):
-            return self._freq_list[k]
+        if not isinstance(k, (str, int)):
+            raise TypeError(
+                "_id is wrong type ({}) expects str or int"
+                .format(type(k)))
+            
         if isinstance(k, str):
-            return self._freq_list[self.pw2id(k)]
-        raise TypeError("_id is wrong type ({}) expects str or int"
-                        .format(type(k)))
+            k = self.pw2id(k)
+        if k > self._freq_list.shape[0] or k < 0:
+            raise ValueError("Index out of range, must between [0, {}]".format(len(self)))
+        return self._freq_list[k]
+
+    def __contains__(self, k):
+        return self.pw2id(k) >= 0
 
     def __len__(self):
         return self._freq_list.shape[0]
@@ -395,7 +421,11 @@ class TestPasswords(unittest.TestCase):
             res1 = set(getallgroups(inp))
             self.assertEqual(res1, res)
 
-
+            
 if __name__ == "__main__":
     # print(list(getallgroups([1,2,3,4,5,6,7,8,9], 5)))
-    unittest.main()
+    # unittest.main()
+    pws = Passwords('/home/rahul/passwords/rockyou-withcount.txt.gz')
+    for s in [" ", "password", " password", "asdfasd a sdfasf "]:
+        print(s, pws.prob_(s))
+
